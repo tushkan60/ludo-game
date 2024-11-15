@@ -1,0 +1,60 @@
+<div class="bg-white rounded-xl shadow-lg overflow-hidden">
+  <!-- Quick Start -->
+  <!-- Round Selection -->
+  <div class="p-6 text-center border-b">
+    <h2 class="text-xl font-bold mb-4">Select the number of rounds:</h2>
+    <div class="flex justify-center gap-2 mb-6">
+      @for (round of roundOptions(); track round) {
+        <button
+          (click)="selectedRounds.set(round)"
+          class="px-4 py-2 rounded-lg transition-colors"
+          [class]="
+            round === selectedRounds()
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+          "
+        >
+          {{ round }} {{ round === 1 ? 'round' : 'rounds' }}
+        </button>
+      }
+    </div>
+    <button
+      (click)="startGame(selectedRounds())"
+      class="w-full max-w-xs px-8 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
+    >
+      Start Game
+    </button>
+  </div>
+
+  <!-- Rules -->
+  <div class="p-6">
+    <h2 class="text-xl font-bold text-gray-800 mb-4">How to Play</h2>
+    <div class="space-y-4 text-gray-600">
+      <p>1. You get <span class="font-medium">3 rolls</span> per round</p>
+      <p>2. After each roll, you can hold dice to keep their values</p>
+      <p>3. Try to make the best poker hand with your dice</p>
+    </div>
+
+    <!-- Scoring -->
+    <div class="mt-8">
+      <h3 class="text-lg font-bold text-gray-800 mb-3">Scoring Combinations</h3>
+      <div class="grid grid-cols-2 gap-4">
+        @for (combo of scoringCombos; track combo.name) {
+          <div class="bg-gray-50 p-3 rounded">
+            <div class="font-medium text-gray-800">{{ combo.name }}</div>
+            <div class="text-sm text-gray-600">{{ combo.points }} points</div>
+            <div class="text-xs text-gray-500">{{ combo.example }}</div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- High Scores -->
+    <div class="mt-8">
+      <h3 class="text-lg font-bold text-gray-800 mb-3">Your High Score</h3>
+      <div class="text-2xl font-bold text-blue-600">
+        {{ getHighScore() }}
+      </div>
+    </div>
+  </div>
+</div>

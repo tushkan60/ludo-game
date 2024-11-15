@@ -4,10 +4,18 @@ export interface DiceRoll {
   id: number;
 }
 
-export interface GameState {
+export interface RoundState {
   dice: DiceRoll[];
   rollsLeft: number;
   currentScore: number;
+  isComplete: boolean;
+}
+
+export interface GameState {
+  currentRound: number;
+  totalRounds: number;
+  roundState: RoundState;
+  totalScore: number;
   highScore: number;
   isGameOver: boolean;
 }
@@ -20,7 +28,9 @@ export type PokerHand =
   | 'Two Pair'
   | 'One Pair'
   | 'High Dice'
-  | 'Nothing';
+  | 'Nothing'
+  | 'Big Straight'
+  | 'Small Straight';
 
 export interface HandResult {
   name: PokerHand;

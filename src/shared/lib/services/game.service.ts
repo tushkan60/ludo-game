@@ -1,5 +1,5 @@
-import { inject, Injectable } from '@angular/core';
-import { DiceRoll, GameState, HandResult } from '../types/game.types';
+import { inject, Injectable, signal } from '@angular/core';
+import { DiceRoll, GameState, HandResult, RoundState } from '../types/game.types';
 import { StorageService } from './storage.service';
 
 @Injectable({
@@ -12,19 +12,19 @@ export class GameService {
 
   private readonly storageService = inject(StorageService);
 
-  initializeGame(): GameState {
-    return {
-      dice: Array.from({ length: this.TOTAL_DICE }, (_, index) => ({
-        value: this.rollDie(),
-        isHeld: false,
-        id: index,
-      })),
+  private gameState = signal<GameState>({
+    currentRound: 1,
+    totalRounds: 1,
+    roundState: {
+      dice: [],
       rollsLeft: this.MAX_ROLLS,
       currentScore: 0,
-      highScore: this.getHighScore(),
-      isGameOver: false,
-    };
-  }
+      isComplete: false,
+    },
+    totalScore: 0,
+    highScore: this.getHighScore(),
+    isGameOver: false,
+  });
 
   rollDice(currentDice: DiceRoll[]): DiceRoll[] {
     return currentDice.map((die) => (die.isHeld ? die : { ...die, value: this.rollDie() }));
@@ -35,7 +35,7 @@ export class GameService {
   }
 
   evaluateHand(dice: DiceRoll[]): HandResult {
-    const values = dice.map((d) => d.value);
+    const values = dice.map((d) => d.value).sort();
     const counts = this.getCounts(values);
     const maxCount = Math.max(...counts.values());
 
@@ -47,6 +47,12 @@ export class GameService {
     }
     if (this.isFullHouse(counts)) {
       return { name: 'Full House', score: 30 };
+    }
+    if (this.isBigStraight(values)) {
+      return { name: 'Big Straight', score: 35 };
+    }
+    if (this.isSmallStraight(values)) {
+      return { name: 'Small Straight', score: 30 };
     }
     if (maxCount === 3) {
       return { name: 'Three of a Kind', score: 20 };
@@ -64,7 +70,7 @@ export class GameService {
     };
   }
 
-  private getCounts(values: number[]): Map<number, number> {
+  getCounts(values: number[]): Map<number, number> {
     const counts = new Map<number, number>();
     values.forEach((value) => {
       counts.set(value, (counts.get(value) || 0) + 1);
@@ -72,16 +78,26 @@ export class GameService {
     return counts;
   }
 
-  private isFullHouse(counts: Map<number, number>): boolean {
+  isFullHouse(counts: Map<number, number>): boolean {
     return Array.from(counts.values()).sort().toString() === '2,3';
   }
 
-  private isTwoPair(counts: Map<number, number>): boolean {
+  isTwoPair(counts: Map<number, number>): boolean {
     const pairCount = Array.from(counts.values()).filter((count) => count === 2).length;
     return pairCount === 2;
   }
 
-  private getHighScore(): number {
+  isSmallStraight(values: number[]): boolean {
+    const uniqueValues = Array.from(new Set(values)).sort().join(',');
+    return uniqueValues.includes('1,2,3,4,5');
+  }
+
+  isBigStraight(values: number[]): boolean {
+    const uniqueValues = Array.from(new Set(values)).sort().join(',');
+    return uniqueValues.includes('2,3,4,5,6');
+  }
+
+  getHighScore(): number {
     return Number(this.storageService.getItem('dicePokerHighScore')) || 0;
   }
 
@@ -90,5 +106,82 @@ export class GameService {
     if (score > currentHigh) {
       this.storageService.setItem('dicePokerHighScore', score.toString());
     }
+  }
+
+  initializeGame(totalRounds: number): void {
+    this.gameState.set({
+      currentRound: 1,
+      totalRounds,
+      roundState: {
+        dice: Array.from({ length: this.TOTAL_DICE }, (_, index) => ({
+          value: this.rollDie(),
+          isHeld: false,
+          id: index,
+        })),
+        rollsLeft: this.MAX_ROLLS,
+        currentScore: 0,
+        isComplete: false,
+      },
+      totalScore: 0,
+      highScore: this.getHighScore(),
+      isGameOver: false,
+    });
+  }
+
+  completeRound(score: number): void {
+    this.gameState.update((state) => ({
+      ...state,
+      totalScore: state.totalScore + score,
+      roundState: {
+        ...state.roundState,
+        currentScore: score,
+        isComplete: true,
+      },
+    }));
+  }
+
+  startNextRound(): void {
+    this.gameState.update((state) => {
+      if (state.currentRound >= state.totalRounds) {
+        return {
+          ...state,
+          isGameOver: true,
+        };
+      }
+
+      return {
+        ...state,
+        currentRound: state.currentRound + 1,
+        roundState: {
+          dice: Array.from({ length: this.TOTAL_DICE }, (_, index) => ({
+            value: this.rollDie(),
+            isHeld: false,
+            id: index,
+          })),
+          rollsLeft: this.MAX_ROLLS,
+          currentScore: 0,
+          isComplete: false,
+        },
+      };
+    });
+  }
+
+  updateRoundState(update: Partial<RoundState>): void {
+    this.gameState.update((state) => ({
+      ...state,
+      roundState: {
+        ...state.roundState,
+        ...update,
+      },
+    }));
+  }
+
+  getGameState(): GameState {
+    return this.gameState();
+  }
+
+  isLastRound(): boolean {
+    const state = this.gameState();
+    return state.currentRound === state.totalRounds;
   }
 }
