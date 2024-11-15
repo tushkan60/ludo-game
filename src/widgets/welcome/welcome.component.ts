@@ -30,6 +30,8 @@ export class WelcomeComponent {
     { name: 'One Pair', points: 10, example: 'Two dice showing same number' },
     { name: 'High Dice', points: '1-6', example: 'Points equal to highest die' },
     { name: 'Nothing', points: 0, example: 'No matching dice' },
+    { name: 'Small Straight', points: 30, example: '1-2-3-4-5' },
+    { name: 'Big Straight', points: 40, example: '2-3-4-5-6' },
   ];
 
   startGame(rounds: number): void {
